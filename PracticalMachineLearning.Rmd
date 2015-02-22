@@ -1,0 +1,163 @@
+---
+title: "Practical Machine Learning Project"
+author: "Francisco J. Garcia R."
+output:
+  pdf_document: default
+  html_document:
+    fig_caption: yes
+    keep_md: yes
+    theme: cerulean
+---
+
+# Background and introduction
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
+
+#Code book
+
+- Original data:
+
+Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.
+Links to Raw Data
+
+- The training data for this project are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+- The test data are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+Background
+
+#Libraries and prerequisites
+
+This section load all prerequisites and libraries which will be used for the project
+
+```{r}
+library(ggplot2)
+library(caret)
+library(rpart)
+library(e1071)
+library(rattle)
+library(rpart)
+```
+
+#Getting and cleaning data
+
+This section download the training and testing files, and perform a basic cleaning of the data, focus on remove useless information
+
+```{r echo=TRUE, cache=TRUE, cache.lazy=TRUE}
+#download.file ("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", 
+#              destfile = "pml-training.csv")
+#download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv", 
+#              destfile = "pml-testing.csv")
+
+trainRaw <- read.csv("pml-training.csv")
+testRaw  <- read.csv("pml-testing.csv")
+
+trainRaw$X      <- NULL
+trainRaw.clean  <- trainRaw[,colSums(is.na(trainRaw)) < .5 * nrow(trainRaw)]
+
+testRaw$X       <- NULL
+testRaw.clean   <- testRaw[,colSums(is.na(testRaw)) < .5 * nrow(testRaw)]
+
+TraininSetClean <- trainRaw.clean[,colnames(trainRaw.clean) %in% colnames(testRaw.clean)]
+TraininSetClean$classe <- trainRaw.clean$classe
+
+```
+
+#Split data: Testing and training data sets
+
+Now, with the clean data, We are going to split the training set into training and testing dataset, in order to compute the models and perform a cross-validation. 
+
+```{r echo=TRUE, cache=TRUE, cache.lazy=TRUE}
+inTrain <- createDataPartition(TraininSetClean$classe, p=0.65, list=FALSE)
+TrainingSet <- TraininSetClean[inTrain,]
+TestSet  <- TraininSetClean[-inTrain,]
+```
+
+#Training models
+
+We are going to fit 3 different models, in order to choose the best accuracy and performance for our dataset, the model that will be used, are:
+
+1. Boosting
+2. Classification Decision Trees
+3. Random Forest
+
+All of them are taken from the caret package.
+
+```{r echo=TRUE, cache=TRUE, cache.lazy=TRUE, eval=FALSE}
+# Using Boosting
+ModelBoosting <- train(classe ~ ., method="gbm", data=TrainingSet, verbose=FALSE)
+
+# Using rpart for Classification Desicision Trees
+ModelDescTree <- train(classe ~ . ,method = "rpart", data=TrainingSet )
+
+# Using Random Forest 
+ModelRandomForest <-train(classe~., data=TrainingSet, method="rf", prox=TRUE)
+```
+
+#Testing and cross-validation
+
+After fit three different models, we are going to evaluate and perform a cross-validation of each model, in order to select the best approach for testing purposes.
+
+First, we get the confusion matrix of each model, and a small review of the accuracy in the Overall Statistics summary.
+
+after that, we resampling randomly for 10 times and apply the same models to each set of samples.
+
+**This process is very computationally expensive, so, we exclude this piece of code from this article.**
+
+At the end, we average the results for each group of samples in order to determine the best model for this project.
+
+```{r echo=TRUE, cache=TRUE, cache.lazy=TRUE, eval=FALSE}
+PredictionModelBoosting <- predict(ModelBoosting, TestSet, type = "class")
+confusionMatrix(pred.rpart, TestSet$classe)
+
+PredictionModelDescTree <- predict(ModelDescTree, TestSet)
+confusionMatrix(PredictionModelDescTree, TestSet$classe)
+
+PredictionModelRandomForest <- predict(ModelRandomForest, TestSet)
+confusionMatrix(ModelRandomForest, TestSet$classe)
+
+```
+
+#Visualization
+
+Finally, we show the results of each model throughout the function "fancyRpartPlot" which help us to understand in a better way the accuracy of each model.
+
+```{r echo=TRUE, cache=TRUE, cache.lazy=TRUE, eval=FALSE}
+fancyRpartPlot(PredictionModelBoosting)
+fancyRpartPlot(PredictionModelDescTree)
+fancyRpartPlot(PredictionModelRandomForest)
+```
+
+#Conclusion
+
+The cross-validation process are very useful and allow to adjust the model to better values of accuracy. We try to apply different algorithm in order to improve the final results and determine the advantages and disadvantages in each of them.
+
+Due to computational reasons, we exclude in this article a part of the process and we show just the worse result in model fitting, the rest of the graphics was excluded.
+
+```{r  echo=TRUE, cache=TRUE, cache.lazy=TRUE}
+# Using rpart for Classification Desicision Trees
+ModelDescTree <- train(classe ~ . ,method = "rpart", data=TrainingSet )
+PredictionModelDescTree <- predict(ModelDescTree, TestSet)
+confusionMatrix(PredictionModelDescTree, TestSet$classe)
+fancyRpartPlot(ModelDescTree$finalModel)
+```
+
+#System information for reproducibility
+
+```{r echo=TRUE}
+Sys.info()
+sessionInfo()
+```
+
+
+
+
+
+
+
+
+
+
